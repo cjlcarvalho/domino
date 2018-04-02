@@ -12,6 +12,19 @@
 #include <QMouseEvent>
 #include <QPixmap>
 
+/* TODO: Se ele clicar em uma peça da mão, setar como selecionada.
+  Guardar a referência para a selecionada e pintá-la de vermelho no repaintHand
+  Se clicar em outra peça da mão, atualizar selecionada.
+  É possível casar a selecionada com o início ou fim da mesa.
+  Verificar se o lado selecionado da peça é igual a esquerda do início ou a direita do fim. Se sim, encaixe.
+  Ou seja, além da referência, guarde o local selecionado da peça. */
+
+/* TODO: Criar QDialog para selecionar se será cliente ou servidor.
+ * O servidor irá iniciar sempre (ignore as regras convencionais nesse caso)
+*/
+
+/* TODO: Jogar com 6! peças, como no jogo comum */
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
@@ -42,7 +55,7 @@ MainWindow::MainWindow(QWidget *parent) :
         QBrush brush(QPixmap(":/images/pieces/" + QString::number(m_pieces[i]->esq()) +
                              "x" + QString::number(m_pieces[i]->dir()) + ".png"));
         rect->setBrush(brush);
-        rect->setPen(QPen(Qt::NoPen));
+        rect->setPen(QPen(QBrush(Qt::red), 4));
         rect->setPos(120 + (i * (brush.textureImage().width() * 0.25) + 2*i), 500);
         rect->setScale(0.25);
 
