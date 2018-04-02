@@ -12,24 +12,19 @@
 #include <QMouseEvent>
 #include <QPixmap>
 
-/* TODO: Se ele clicar em uma peça da mão, setar como selecionada.
-  Guardar a referência para a selecionada e pintá-la de vermelho no repaintHand
-  Se clicar em outra peça da mão, atualizar selecionada.
-  É possível casar a selecionada com o início ou fim da mesa.
-  Verificar se o lado selecionado da peça é igual a esquerda do início ou a direita do fim. Se sim, encaixe.
-  Ou seja, além da referência, guarde o local selecionado da peça. */
+// TODO: Criar dialog para selecionar entre cliente e servidor.
 
-/* TODO: Criar QDialog para selecionar se será cliente ou servidor.
- * O servidor irá iniciar sempre (ignore as regras convencionais nesse caso)
-*/
+// TODO: Criar comunicação entre cliente e servidor. O servidor sempre jogará primeiro.
 
-/* TODO: Jogar com 6! peças, como no jogo comum */
+// TODO: Criar transmissão de json entre cliente e servidor.
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
+    // TODO: Iniciar board apenas caso for servidor.
     m_board(new Board),
-    m_boardWidthCount(0)
+    m_chooseIndex(-1),
+    m_direction(false)
 {
     ui->setupUi(this);
     layout()->setSizeConstraint(QLayout::SetFixedSize);
@@ -47,22 +42,14 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->graphicsView->setMaximumSize(1000, 800);
     ui->graphicsView->adjustSize();
 
-    for (int i = 0; i < 7; i++) {
+    for (int i = 0; i < 7; i++)
         m_pieces << m_board->purchasePiece();
 
-        QGraphicsRectItem *rect = scene->addRect(0, 0, 159, 318);
+    ui->label->setText("Peças p/ comprar: " + QString::number(m_board->purchaseablePiecesCount()));
 
-        QBrush brush(QPixmap(":/images/pieces/" + QString::number(m_pieces[i]->esq()) +
-                             "x" + QString::number(m_pieces[i]->dir()) + ".png"));
-        rect->setBrush(brush);
-        rect->setPen(QPen(QBrush(Qt::red), 4));
-        rect->setPos(120 + (i * (brush.textureImage().width() * 0.25) + 2*i), 500);
-        rect->setScale(0.25);
+    connect(ui->comprarPeca, &QPushButton::clicked, this, &MainWindow::purchasePiece);
 
-        m_handRects << rect;
-    }
-
-    connect(ui->comprarPeca, &QPushButton::clicked, this, &MainWindow::purshasePiece);
+    repaint();
 }
 
 MainWindow::~MainWindow()
@@ -70,7 +57,7 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::purshasePiece()
+void MainWindow::purchasePiece()
 {
     Piece *piece = m_board->purchasePiece();
 
@@ -80,20 +67,15 @@ void MainWindow::purshasePiece()
         message.setText("Não é mais possível comprar peças.");
         message.exec();
     }
-    else {
+    else
         m_pieces << piece;
 
-        QGraphicsRectItem *rect = new QGraphicsRectItem(0, 0, 159, 318);
-        QBrush brush(QPixmap(":/images/pieces/" + QString::number(m_pieces[m_pieces.size() - 1]->esq()) +
-                             "x" + QString::number(m_pieces[m_pieces.size() - 1]->dir()) + ".png"));
-        rect->setBrush(brush);
-        rect->setPen(QPen(Qt::NoPen));
-        rect->setPos(120 + ((m_pieces.size() - 1) * (brush.textureImage().width() * 0.25) + 2*(m_pieces.size() - 1)), 500);
-        rect->setScale(0.25);
-        ui->graphicsView->scene()->addItem(rect);
+    m_chooseIndex = -1;
+    m_direction = false;
 
-        m_handRects << rect;
-    }
+    ui->label->setText("Peças p/ comprar: " + QString::number(m_board->purchaseablePiecesCount()));
+
+    repaint();
 }
 
 bool MainWindow::eventFilter(QObject *watched, QEvent *event)
@@ -108,158 +90,215 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
         if (item) {
             for (int i = 0; i < m_handRects.size(); i++) {
                 if (m_handRects[i] == item) {
-                    if (m_boardPieces.empty()) {
-                        QGraphicsRectItem *rect = new QGraphicsRectItem(0, 0, 159, 318);
-                        QBrush brush(QPixmap(":/images/pieces/" + QString::number(m_pieces[i]->esq()) +
-                                              "x" + QString::number(m_pieces[i]->dir()) + ".png"));
+                    m_chooseIndex = i;
+                    m_direction = (point.y() - 500 > ((m_handRects[i]->brush().textureImage().height() * 0.25) / 2));
+                    // true -> baixo // false -> cima
+                    break;
+                }
+            }
 
-                        QTransform transform;
-                        transform.rotate(-90);
-                        rect->setBrush(brush);
-                        rect->setTransform(transform);
+            if (m_chooseIndex != -1) {
+                if (m_boardRects.empty()) {
+                    m_boardPieces << m_pieces[m_chooseIndex];
 
-                        rect->setPen(QPen(Qt::NoPen));
+                    m_pieces.removeAt(m_chooseIndex);
 
-                        if (m_boardPieces.size() % 10 == 0)
-                            m_boardWidthCount = 0;
+                    m_direction = false;
+                    m_chooseIndex = -1;
+                }
+                else if (m_boardRects.size() == 1 && item == m_boardRects.first()){
+                    // ver se a parte clicada do primeiro item é a esquerda ou direita
 
-                        rect->setPos(20 + (m_boardWidthCount * (brush.textureImage().height() * 0.25)) +
-                                     2 * m_boardWidthCount, 150 + (brush.textureImage().width() * 0.25 *
-                                                                            (m_boardPieces.size() / 10)) +
-                                                                    ((m_boardPieces.size() / 10) + 2));
+                    if ((point.x() - 100) < (m_boardRects.first()->brush().textureImage().height() * 0.25 / 2)) { // esq
+                        if (m_direction) {
+                            if (m_pieces[m_chooseIndex]->dir() == m_boardPieces.first()->esq()) {
+                                m_boardPieces.prepend(m_pieces[m_chooseIndex]);
+                                m_pieces.removeAt(m_chooseIndex);
 
-                        m_boardWidthCount++;
-
-                        rect->setScale(0.25);
-
-                        m_boardPieces << m_pieces[i];
-                        m_boardRects << m_handRects[i];
-
-                        ui->graphicsView->scene()->removeItem(m_handRects[i]);
-
-                        m_handRects.removeAt(i);
-                        m_pieces.removeAt(i);
-
-                        ui->graphicsView->scene()->addItem(rect);
-
-                        break;
-                    }
-                    else if (point.y() - 500 >  // baixo
-                            ((m_handRects[i]->brush().textureImage().height() * 0.25) / 2)) {
-                        if (m_pieces[i]->dir() != m_boardPieces.last()->dir()) {
-                            QMessageBox message;
-                            message.setWindowTitle("Jogada incorreta");
-                            message.setText("Não é possível realizar a jogada, "
-                                            "tente novamente, passe a vez ou compre uma peça.");
-                            message.exec();
+                                m_direction = false;
+                                m_chooseIndex = -1;
+                            }
+                            else {
+                                showErrorMessage();
+                            }
                         }
                         else {
-                            QGraphicsRectItem *rect = new QGraphicsRectItem(0, 0, 159, 318);
-                            QBrush brush(QPixmap(":/images/pieces/" + QString::number(m_pieces[i]->esq()) +
-                                                  "x" + QString::number(m_pieces[i]->dir()) + ".png"));
+                            if (m_pieces[m_chooseIndex]->esq() == m_boardPieces.first()->esq()) {
+                                m_pieces[m_chooseIndex]->inverter();
 
-                            QTransform transform;
-                            transform.rotate(90);
-                            rect->setBrush(brush);
-                            rect->setTransform(transform);
+                                m_boardPieces.prepend(m_pieces[m_chooseIndex]);
+                                m_pieces.removeAt(m_chooseIndex);
 
-                            rect->setPen(QPen(Qt::NoPen));
-
-                            if (m_boardPieces.size() % 10 == 0)
-                                m_boardWidthCount = 0;
-
-                            rect->setPos(100 + (m_boardWidthCount * (brush.textureImage().height() * 0.25)) +
-                                         2 * m_boardWidthCount, 110 + (brush.textureImage().width() * 0.25 *
-                                                                                (m_boardPieces.size() / 10)) +
-                                                                        ((m_boardPieces.size() / 10) + 2));
-
-                            m_boardWidthCount++;
-
-                            rect->setScale(0.25);
-
-                            m_pieces[i]->inverter();
-
-                            m_boardPieces << m_pieces[i];
-                            m_boardRects << m_handRects[i];
-
-                            ui->graphicsView->scene()->removeItem(m_handRects[i]);
-
-                            m_handRects.removeAt(i);
-                            m_pieces.removeAt(i);
-
-                            ui->graphicsView->scene()->addItem(rect);
-
-                            break;
+                                m_direction = false;
+                                m_chooseIndex = -1;
+                            }
+                            else {
+                                showErrorMessage();
+                            }
                         }
                     }
-                    else {
-                        if (m_pieces[i]->esq() != m_boardPieces.last()->dir()) {
-                            QMessageBox message;
-                            message.setWindowTitle("Jogada incorreta");
-                            message.setText("Não é possível realizar a jogada,"
-                                            " tente novamente, passe a vez ou compre uma peça.");
-                            message.exec();
+                    else { // dir
+                        if (m_direction) {
+                            if (m_pieces[m_chooseIndex]->dir() == m_boardPieces.first()->dir()) {
+                                m_pieces[m_chooseIndex]->inverter();
+
+                                m_boardPieces.append(m_pieces[m_chooseIndex]);
+                                m_pieces.removeAt(m_chooseIndex);
+
+                                m_direction = false;
+                                m_chooseIndex = -1;
+                            }
+                            else {
+                                showErrorMessage();
+                            }
                         }
                         else {
-                            QGraphicsRectItem *rect = new QGraphicsRectItem(0, 0, 159, 318);
-                            QBrush brush(QPixmap(":/images/pieces/" + QString::number(m_pieces[i]->esq()) +
-                                                  "x" + QString::number(m_pieces[i]->dir()) + ".png"));
+                            if (m_pieces[m_chooseIndex]->esq() == m_boardPieces.first()->dir()) {
+                                m_boardPieces.append(m_pieces[m_chooseIndex]);
+                                m_pieces.removeAt(m_chooseIndex);
 
-                            QTransform transform;
-                            transform.rotate(-90);
-                            rect->setBrush(brush);
-                            rect->setTransform(transform);
+                                m_direction = false;
+                                m_chooseIndex = -1;
+                            }
+                            else {
+                                showErrorMessage();
+                            }
+                        }
+                    }
+                }
+                else {
+                    if (item == m_boardRects.first()) {
+                        if (m_direction) {
+                            // comparar a direita da peça escolhida com a esquerda do início
+                            if (m_pieces[m_chooseIndex]->dir() == m_boardPieces.first()->esq()) {
+                                m_boardPieces.prepend(m_pieces[m_chooseIndex]);
+                                m_pieces.removeAt(m_chooseIndex);
 
-                            rect->setPen(QPen(Qt::NoPen));
+                                m_direction = false;
+                                m_chooseIndex = -1;
+                            }
+                            else {
+                                showErrorMessage();
+                            }
+                        }
+                        else {
+                            // comparar o lado de cima da peça escolhida com a esquerda do início
+                            if (m_pieces[m_chooseIndex]->esq() == m_boardPieces.first()->esq()) {
+                                m_pieces[m_chooseIndex]->inverter();
 
-                            if (m_boardPieces.size() % 10 == 0)
-                                m_boardWidthCount = 0;
+                                m_boardPieces.prepend(m_pieces[m_chooseIndex]);
+                                m_pieces.removeAt(m_chooseIndex);
 
-                            rect->setPos(20 + (m_boardWidthCount * (brush.textureImage().height() * 0.25)) +
-                                         2 * m_boardWidthCount, 150 + (brush.textureImage().width() * 0.25 *
-                                                                                (m_boardPieces.size() / 10)) +
-                                                                        ((m_boardPieces.size() / 10) + 2));
+                                m_direction = false;
+                                m_chooseIndex = -1;
+                            }
+                            else {
+                                showErrorMessage();
+                            }
+                        }
+                    }
+                    else if (item == m_boardRects.last()){
+                        if (m_direction) {
+                            if (m_pieces[m_chooseIndex]->dir() == m_boardPieces.last()->dir()) {
+                                m_pieces[m_chooseIndex]->inverter();
 
-                            m_boardWidthCount++;
+                                m_boardPieces.append(m_pieces[m_chooseIndex]);
+                                m_pieces.removeAt(m_chooseIndex);
 
-                            rect->setScale(0.25);
+                                m_direction = false;
+                                m_chooseIndex = -1;
+                            }
+                            else {
+                                showErrorMessage();
+                            }
+                        }
+                        else {
+                            if (m_pieces[m_chooseIndex]->esq() == m_boardPieces.last()->dir()) {
+                                m_boardPieces.append(m_pieces[m_chooseIndex]);
+                                m_pieces.removeAt(m_chooseIndex);
 
-                            m_boardPieces << m_pieces[i];
-                            m_boardRects << m_handRects[i];
-
-                            ui->graphicsView->scene()->removeItem(m_handRects[i]);
-
-                            m_handRects.removeAt(i);
-                            m_pieces.removeAt(i);
-
-                            ui->graphicsView->scene()->addItem(rect);
-
-                            break;
+                                m_direction = false;
+                                m_chooseIndex = -1;
+                            }
+                            else {
+                                showErrorMessage();
+                            }
                         }
                     }
                 }
             }
-            repaintHand();
+            repaint();
+
+            if (m_pieces.empty()) {
+                showWinMessage();
+
+                // TODO: enviar mensagem que venceu o jogo
+
+                exit(0);
+            }
+            else {
+                // TODO: enviar atualização da mesa para o oponente
+            }
         }
     }
 
     return QMainWindow::eventFilter(watched, event);
 }
 
-void MainWindow::repaintHand()
+void MainWindow::repaint()
 {
     for (QGraphicsRectItem *item : m_handRects) {
         ui->graphicsView->scene()->removeItem(item);
         delete item;
     }
+    for (QGraphicsRectItem *item : m_boardRects) {
+        ui->graphicsView->scene()->removeItem(item);
+        delete item;
+    }
+
     m_handRects.clear();
+    m_boardRects.clear();
+
+    int boardWidthCount = 0;
+
+    for (int i = 0; i < m_boardPieces.size(); i++) {
+        QGraphicsRectItem *rect = new QGraphicsRectItem(0, 0, 159, 318);
+        QBrush brush(QPixmap(":/images/pieces/" + QString::number(m_boardPieces[i]->esq()) +
+                              "x" + QString::number(m_boardPieces[i]->dir()) + ".png"));
+
+        QTransform transform;
+        transform.rotate(-90);
+        rect->setBrush(brush);
+        rect->setTransform(transform);
+
+        rect->setPen(QPen(Qt::NoPen));
+
+        if (i % 10 == 0)
+            boardWidthCount = 0;
+
+        rect->setPos(20 + (boardWidthCount * (brush.textureImage().height() * 0.25)) + 2 * boardWidthCount,
+                     150 + (brush.textureImage().width() * 0.25 * (i / 10)) + ((i / 10) + 2));
+
+        boardWidthCount++;
+
+        rect->setScale(0.25);
+
+        ui->graphicsView->scene()->addItem(rect);
+
+        m_boardRects << rect;
+    }
 
     for (int i = 0; i < m_pieces.size(); i++) {
         QGraphicsRectItem *rect = new QGraphicsRectItem(0, 0, 159, 318);
         QBrush brush(QPixmap(":/images/pieces/" + QString::number(m_pieces[i]->esq()) + "x" +
                              QString::number(m_pieces[i]->dir()) + ".png"));
         rect->setBrush(brush);
-        rect->setPen(QPen(Qt::NoPen));
+
+        if (m_chooseIndex == i)
+            rect->setPen(QPen(QBrush(Qt::red), 9));
+        else
+            rect->setPen(QPen(Qt::NoPen));
+
         rect->setPos(120 + (i * (brush.textureImage().width() * 0.25) + 2*i), 500);
         rect->setScale(0.25);
 
@@ -267,4 +306,23 @@ void MainWindow::repaintHand()
 
         m_handRects << rect;
     }
+}
+
+void MainWindow::showErrorMessage()
+{
+    QMessageBox message;
+    message.setWindowTitle("Jogada incorreta");
+    message.setText("Não é possível realizar a jogada,"
+                    " tente novamente, passe a vez ou compre uma peça.");
+    message.show();
+    message.exec();
+}
+
+void MainWindow::showWinMessage()
+{
+    QMessageBox message;
+    message.setWindowTitle("Você venceu!");
+    message.setText("Parabéns, você venceu!");
+    message.show();
+    message.exec();
 }

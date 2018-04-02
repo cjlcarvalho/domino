@@ -21,11 +21,13 @@ public:
     ~MainWindow();
 
 private slots:
-    void purshasePiece();
+    void purchasePiece();
 
 private:
     bool eventFilter(QObject *watched, QEvent *event);
-    void repaintHand();
+    void repaint();
+    void showErrorMessage();
+    void showWinMessage();
 
 private:
     Ui::MainWindow *ui;
@@ -35,8 +37,8 @@ private:
     QList<Piece *> m_boardPieces;
     QList<QGraphicsRectItem *> m_boardRects;
 
-    int m_boardWidthCount;
-
+    int m_chooseIndex;
+    bool m_direction;
 };
 
 #endif // MAINWINDOW_H

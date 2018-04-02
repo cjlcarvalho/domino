@@ -1,8 +1,9 @@
 #include "board.h"
 #include "piece.h"
 
-#include <iostream>
+#include <cstdlib>
 #include <QDebug>
+#include <QJsonArray>
 #include <QtGlobal>
 
 using namespace std;
@@ -12,16 +13,30 @@ Board::Board()
     init();
 }
 
+Board::Board(const QJsonObject &object)
+{
+    update(object);
+}
+
 void Board::init()
 {
     for (int i = 0; i < 7; i++)
-        for (int j = 0; j < 7; j++)
+        for (int j = 0; j <= i; j++)
             m_purchaseablePieces.append(new Piece(i, j));
 }
 
-std::deque<Piece *> Board::pieces() const
+void Board::update(const QJsonObject &object)
 {
-    return m_pieces;
+    qDeleteAll(m_purchaseablePieces);
+    m_purchaseablePieces.clear();
+
+    if (object.empty())
+        return;
+
+    QJsonArray array = object["purchaseablePieces"].toArray();
+
+    for (const QJsonValue &value : array)
+        m_purchaseablePieces << new Piece(value.toObject());
 }
 
 Piece *Board::purchasePiece()
@@ -44,26 +59,21 @@ bool Board::isPurchaseablePiecesEmpty() const
     return m_purchaseablePieces.empty();
 }
 
-void Board::addPiece(Piece *piece)
+unsigned int Board::purchaseablePiecesCount() const
 {
-    if (m_pieces.empty())
-        m_pieces.push_back(piece);
-    else {
-        if (m_pieces.front()->esq() == piece->dir())
-            m_pieces.push_front(piece);
-        else if (m_pieces.back()->dir() == piece->esq())
-            m_pieces.push_back(piece);
-    }
+    return m_purchaseablePieces.size();
 }
 
-void Board::printBoard() const
+const QJsonObject Board::asJson() const
 {
-    int cont = 1;
-    for (Piece *piece : m_pieces) {
-        cout << piece->esq() << ":" << piece->dir() << " | ";
-        if (!(cont % 8))
-            cout << endl;
-        cont++;
-    }
-    cout << endl;
+    QJsonObject jsonObject;
+
+    QJsonArray purchaseablePieces;
+
+    for (Piece *piece : m_purchaseablePieces)
+        purchaseablePieces.append(piece->asJson());
+
+    jsonObject["purchaseablePieces"] = purchaseablePieces;
+
+    return jsonObject;
 }

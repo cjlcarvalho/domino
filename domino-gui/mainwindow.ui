@@ -59,13 +59,38 @@
     <property name="geometry">
      <rect>
       <x>90</x>
-      <y>510</y>
+      <y>500</y>
       <width>101</width>
-      <height>31</height>
+      <height>41</height>
      </rect>
     </property>
     <property name="text">
      <string>Comprar peça</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label">
+    <property name="enabled">
+     <bool>true</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>90</x>
+      <y>459</y>
+      <width>131</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="autoFillBackground">
+     <bool>false</bool>
+    </property>
+    <property name="styleSheet">
+     <string notr="true">border-radius: 5px; background: rgb(64, 68, 73); border: 1px solid black; </string>
+    </property>
+    <property name="text">
+     <string>Peças p/ comprar: xx</string>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignCenter</set>
     </property>
    </widget>
   </widget>
@@ -75,7 +100,7 @@
      <x>0</x>
      <y>0</y>
      <width>1000</width>
-     <height>22</height>
+     <height>18</height>
     </rect>
    </property>
    <property name="minimumSize">
