@@ -76,15 +76,21 @@
      <rect>
       <x>90</x>
       <y>459</y>
-      <width>131</width>
+      <width>141</width>
       <height>31</height>
      </rect>
     </property>
+    <property name="font">
+     <font>
+      <weight>75</weight>
+      <bold>true</bold>
+     </font>
+    </property>
     <property name="autoFillBackground">
-     <bool>false</bool>
+     <bool>true</bool>
     </property>
     <property name="styleSheet">
-     <string notr="true">border-radius: 5px; background: rgb(64, 68, 73); border: 1px solid black; </string>
+     <string notr="true"/>
     </property>
     <property name="text">
      <string>Peças p/ comprar: xx</string>
@@ -100,7 +106,7 @@
      <x>0</x>
      <y>0</y>
      <width>1000</width>
-     <height>18</height>
+     <height>30</height>
     </rect>
    </property>
    <property name="minimumSize">
