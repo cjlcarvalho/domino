@@ -247,14 +247,14 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
 
 void MainWindow::repaint()
 {
-    for (QGraphicsRectItem *item : m_handRects) {
+    for (QGraphicsRectItem *item : m_handRects)
         ui->graphicsView->scene()->removeItem(item);
-        delete item;
-    }
-    for (QGraphicsRectItem *item : m_boardRects) {
+    
+    for (QGraphicsRectItem *item : m_boardRects)
         ui->graphicsView->scene()->removeItem(item);
-        delete item;
-    }
+
+    qDeleteAll(m_handRects);
+    qDeleteAll(m_boardRects);
 
     m_handRects.clear();
     m_boardRects.clear();
