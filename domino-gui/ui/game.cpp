@@ -1,33 +1,56 @@
-#include "mainwindow.h"
-#include "ui_mainwindow.h"
+#include "game.h"
+#include "ui_game.h"
 
-#include "board.h"
-#include "piece.h"
+#include "game/board.h"
+#include "game/piece.h"
+#include "socket/client.h"
 
 #include <QDebug>
 #include <QGraphicsPixmapItem>
 #include <QGraphicsScene>
+#include <QJsonArray>
+#include <QJsonDocument>
 #include <QLayout>
 #include <QMessageBox>
 #include <QMouseEvent>
 #include <QPixmap>
 
-// TODO: Criar dialog para selecionar entre cliente e servidor.
-
-// TODO: Criar comunicação entre cliente e servidor. O servidor sempre jogará primeiro.
-
-// TODO: Criar transmissão de json entre cliente e servidor.
-
-MainWindow::MainWindow(QWidget *parent) :
+Game::Game(Socket *socket, QWidget *parent) :
     QMainWindow(parent),
-    ui(new Ui::MainWindow),
-    // TODO: Iniciar board apenas caso for servidor.
+    m_socket(socket),
+    ui(new Ui::Game),
     m_board(new Board),
     m_chooseIndex(-1),
     m_direction(false)
-{
+{   
     ui->setupUi(this);
     layout()->setSizeConstraint(QLayout::SetFixedSize);
+
+    if (dynamic_cast<Client *>(socket)) {
+        QEventLoop loop;
+
+        auto rcvMsg = [&](const QString &message) {
+            QJsonDocument doc = QJsonDocument::fromJson(message.toLocal8Bit());
+            m_board->update(doc.object());
+
+            for (QJsonValue value : doc.object()["board"].toArray())
+                m_boardPieces << new Piece(value.toObject()["esq"].toInt(), value.toObject()["dir"].toInt());
+
+            setEnabled(true);
+
+            loop.exit();
+        };
+
+        setEnabled(false);
+
+        auto conn = connect(socket, &Socket::messageReceived, rcvMsg);
+
+        loop.exec();
+
+        disconnect(conn);
+    }
+
+    connect(m_socket, &Socket::messageReceived, this, &Game::playTurn);
 
     setWindowTitle("Super Dominó");
 
@@ -45,19 +68,20 @@ MainWindow::MainWindow(QWidget *parent) :
     for (int i = 0; i < 7; i++)
         m_pieces << m_board->purchasePiece();
 
-    ui->label->setText("Peças p/ comprar: " + QString::number(m_board->purchaseablePiecesCount()));
-
-    connect(ui->comprarPeca, &QPushButton::clicked, this, &MainWindow::purchasePiece);
+    connect(ui->comprarPeca, &QPushButton::clicked, this, &Game::purchasePiece);
+    connect(ui->passarVez, &QPushButton::clicked, this, &Game::checkPlay);
 
     repaint();
+
+    // TODO: Incluir closeEvent que encerra a conexão dos sockets.
 }
 
-MainWindow::~MainWindow()
+Game::~Game()
 {
     delete ui;
 }
 
-void MainWindow::purchasePiece()
+void Game::purchasePiece()
 {
     Piece *piece = m_board->purchasePiece();
 
@@ -73,13 +97,14 @@ void MainWindow::purchasePiece()
     m_chooseIndex = -1;
     m_direction = false;
 
-    ui->label->setText("Peças p/ comprar: " + QString::number(m_board->purchaseablePiecesCount()));
-
     repaint();
 }
 
-bool MainWindow::eventFilter(QObject *watched, QEvent *event)
+bool Game::eventFilter(QObject *watched, QEvent *event)
 {
+    if (!ui->comprarPeca->isEnabled() && !ui->passarVez->isEnabled())
+        return false;
+
     QMouseEvent *mEvent = dynamic_cast<QMouseEvent *>(event);
 
     if (mEvent) {
@@ -92,35 +117,30 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
                 if (m_handRects[i] == item) {
                     m_chooseIndex = i;
                     m_direction = (point.y() - 500 > ((m_handRects[i]->brush().textureImage().height() * 0.25) / 2));
-                    // true -> baixo // false -> cima
+                    // true -> baixo
+                    // false -> cima
                     break;
                 }
             }
 
             if (m_chooseIndex != -1) {
                 if (m_boardRects.empty()) {
-                    m_boardPieces << m_pieces[m_chooseIndex];
-
+                    m_boardPieces.append(m_pieces[m_chooseIndex]);
                     m_pieces.removeAt(m_chooseIndex);
 
-                    m_direction = false;
-                    m_chooseIndex = -1;
+                    checkPlay();
                 }
                 else if (m_boardRects.size() == 1 && item == m_boardRects.first()){
-                    // ver se a parte clicada do primeiro item é a esquerda ou direita
-
                     if ((point.x() - 100) < (m_boardRects.first()->brush().textureImage().height() * 0.25 / 2)) { // esq
                         if (m_direction) {
                             if (m_pieces[m_chooseIndex]->dir() == m_boardPieces.first()->esq()) {
                                 m_boardPieces.prepend(m_pieces[m_chooseIndex]);
                                 m_pieces.removeAt(m_chooseIndex);
 
-                                m_direction = false;
-                                m_chooseIndex = -1;
+                                checkPlay();
                             }
-                            else {
+                            else
                                 showErrorMessage();
-                            }
                         }
                         else {
                             if (m_pieces[m_chooseIndex]->esq() == m_boardPieces.first()->esq()) {
@@ -129,12 +149,10 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
                                 m_boardPieces.prepend(m_pieces[m_chooseIndex]);
                                 m_pieces.removeAt(m_chooseIndex);
 
-                                m_direction = false;
-                                m_chooseIndex = -1;
+                                checkPlay();
                             }
-                            else {
+                            else
                                 showErrorMessage();
-                            }
                         }
                     }
                     else { // dir
@@ -145,56 +163,46 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
                                 m_boardPieces.append(m_pieces[m_chooseIndex]);
                                 m_pieces.removeAt(m_chooseIndex);
 
-                                m_direction = false;
-                                m_chooseIndex = -1;
+                                checkPlay();
                             }
-                            else {
+                            else
                                 showErrorMessage();
-                            }
                         }
                         else {
                             if (m_pieces[m_chooseIndex]->esq() == m_boardPieces.first()->dir()) {
                                 m_boardPieces.append(m_pieces[m_chooseIndex]);
                                 m_pieces.removeAt(m_chooseIndex);
 
-                                m_direction = false;
-                                m_chooseIndex = -1;
+                                checkPlay();
                             }
-                            else {
+                            else
                                 showErrorMessage();
-                            }
                         }
                     }
                 }
                 else {
                     if (item == m_boardRects.first()) {
                         if (m_direction) {
-                            // comparar a direita da peça escolhida com a esquerda do início
                             if (m_pieces[m_chooseIndex]->dir() == m_boardPieces.first()->esq()) {
                                 m_boardPieces.prepend(m_pieces[m_chooseIndex]);
                                 m_pieces.removeAt(m_chooseIndex);
 
-                                m_direction = false;
-                                m_chooseIndex = -1;
+                                checkPlay();
                             }
-                            else {
+                            else
                                 showErrorMessage();
-                            }
                         }
                         else {
-                            // comparar o lado de cima da peça escolhida com a esquerda do início
                             if (m_pieces[m_chooseIndex]->esq() == m_boardPieces.first()->esq()) {
                                 m_pieces[m_chooseIndex]->inverter();
 
                                 m_boardPieces.prepend(m_pieces[m_chooseIndex]);
                                 m_pieces.removeAt(m_chooseIndex);
 
-                                m_direction = false;
-                                m_chooseIndex = -1;
+                                checkPlay();
                             }
-                            else {
+                            else
                                 showErrorMessage();
-                            }
                         }
                     }
                     else if (item == m_boardRects.last()){
@@ -205,47 +213,115 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
                                 m_boardPieces.append(m_pieces[m_chooseIndex]);
                                 m_pieces.removeAt(m_chooseIndex);
 
-                                m_direction = false;
-                                m_chooseIndex = -1;
+                                checkPlay();
                             }
-                            else {
+                            else
                                 showErrorMessage();
-                            }
                         }
                         else {
                             if (m_pieces[m_chooseIndex]->esq() == m_boardPieces.last()->dir()) {
                                 m_boardPieces.append(m_pieces[m_chooseIndex]);
                                 m_pieces.removeAt(m_chooseIndex);
 
-                                m_direction = false;
-                                m_chooseIndex = -1;
+                                checkPlay();
                             }
-                            else {
+                            else
                                 showErrorMessage();
-                            }
                         }
                     }
                 }
             }
             repaint();
-
-            if (m_pieces.empty()) {
-                showWinMessage();
-
-                // TODO: enviar mensagem que venceu o jogo
-
-                exit(0);
-            }
-            else {
-                // TODO: enviar atualização da mesa para o oponente
-            }
         }
     }
 
     return QMainWindow::eventFilter(watched, event);
 }
 
-void MainWindow::repaint()
+void Game::playTurn(const QString &message)
+{
+    QJsonDocument doc = QJsonDocument::fromJson(message.toLocal8Bit());
+    QJsonObject obj = doc.object();
+
+    m_board->update(obj);
+
+    // TODO: Verificar empate.
+
+    if (obj["win"].toString() == "Y") {
+        QMessageBox msg;
+        msg.setWindowTitle("Você perdeu!");
+        msg.setText("Seu oponente ganhou!");
+        msg.show();
+        msg.exec();
+
+        close();
+    }
+    else {
+        setEnabled(true);
+
+        m_board->update(obj);
+
+        qDeleteAll(m_boardPieces);
+        m_boardPieces.clear();
+
+        for (QJsonValue value : obj["board"].toArray())
+            m_boardPieces << new Piece(value.toObject()["esq"].toInt(), value.toObject()["dir"].toInt());
+
+        repaint();
+    }
+}
+
+void Game::checkPlay()
+{
+    m_direction = false;
+    m_chooseIndex = -1;
+
+    if (m_pieces.empty()) {
+        showWinMessage();
+
+        QJsonObject obj;
+
+        obj["win"] = "Y";
+        obj["purchaseablePieces"] = m_board->asJson();
+
+        QJsonArray array;
+
+        for (Piece *piece : m_boardPieces)
+            array.append(piece->asJson());
+
+        obj["board"] = array;
+
+        QJsonDocument doc;
+        doc.setObject(obj);
+
+        m_socket->send(doc.toJson());
+
+        m_socket->close();
+
+        close();
+    }
+    else {
+        QJsonObject obj;
+        obj["win"] = "N";
+        obj["purchaseablePieces"] = m_board->asJson();
+
+        QJsonArray array;
+
+        for (Piece *piece : m_boardPieces)
+            array.append(piece->asJson());
+
+        obj["board"] = array;
+
+        QJsonDocument doc;
+        doc.setObject(obj);
+
+        m_socket->send(doc.toJson());
+
+        setEnabled(false);
+    }
+}
+
+void Game::repaint()
 {
     for (QGraphicsRectItem *item : m_handRects)
         ui->graphicsView->scene()->removeItem(item);
@@ -277,7 +353,7 @@ void MainWindow::repaint()
             boardWidthCount = 0;
 
         rect->setPos(20 + (boardWidthCount * (brush.textureImage().height() * 0.25)) + 2 * boardWidthCount,
-                     150 + (brush.textureImage().width() * 0.25 * (i / 10)) + ((i / 10) + 2));
+                     120 + (brush.textureImage().width() * 0.25 * (i / 10)) + ((i / 10) + 2));
 
         boardWidthCount++;
 
@@ -306,9 +382,11 @@ void MainWindow::repaint()
 
         m_handRects << rect;
     }
+
+    ui->label->setText("Peças p/ comprar: " + QString::number(m_board->purchaseablePiecesCount()));
 }
 
-void MainWindow::showErrorMessage()
+void Game::showErrorMessage()
 {
     QMessageBox message;
     message.setWindowTitle("Jogada incorreta");
@@ -318,7 +396,7 @@ void MainWindow::showErrorMessage()
     message.exec();
 }
 
-void MainWindow::showWinMessage()
+void Game::showWinMessage()
 {
     QMessageBox message;
     message.setWindowTitle("Você venceu!");

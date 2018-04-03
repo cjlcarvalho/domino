@@ -1,7 +1,7 @@
 #ifndef BOARD_H
 #define BOARD_H
 
-#include <deque>
+#include <QJsonObject>
 #include <QList>
 
 class Piece;
@@ -10,15 +10,17 @@ class Board
 {
 public:
     Board();
-    void init();
-    std::deque<Piece *> pieces() const;
+    Board(const QJsonObject &object);
+    void update(const QJsonObject &object);
     Piece *purchasePiece();
     bool isPurchaseablePiecesEmpty() const;
-    void addPiece(Piece *piece);
-    void printBoard() const;
+    unsigned int purchaseablePiecesCount() const;
+    const QJsonArray asJson() const;
 
 private:
-    std::deque<Piece *> m_pieces;
+    void init();
+
+private:
     QList<Piece *> m_purchaseablePieces;
 };
 

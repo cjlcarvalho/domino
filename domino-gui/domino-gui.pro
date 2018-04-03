@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui
+QT       += core gui network
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -25,17 +25,35 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
         main.cpp \
-        mainwindow.cpp \
-    board.cpp \
-    piece.cpp
+    game/board.cpp \
+    game/piece.cpp \
+    ui/game.cpp \
+    ui/maindialog.cpp \
+    ui/initialform.cpp \
+    socket/client.cpp \
+    socket/server.cpp \
+    ui/servidorform.cpp \
+    ui/clientform.cpp
 
 HEADERS += \
-        mainwindow.h \
-    board.h \
-    piece.h
+    game/board.h \
+    game/piece.h \
+    ui/game.h \
+    ui/maindialog.h \
+    ui/initialform.h \
+    socket/client.h \
+    socket/server.h \
+    socket/socket.h \
+    ui/servidorform.h \
+    ui/clientform.h \
+    socket/settings.h
 
 FORMS += \
-        mainwindow.ui
+    ui/game.ui \
+    ui/maindialog.ui \
+    ui/initialform.ui \
+    ui/servidorform.ui \
+    ui/clientform.ui
 
 RESOURCES += \
     img.qrc

@@ -64,16 +64,12 @@ unsigned int Board::purchaseablePiecesCount() const
     return m_purchaseablePieces.size();
 }
 
-const QJsonObject Board::asJson() const
+const QJsonArray Board::asJson() const
 {
-    QJsonObject jsonObject;
-
     QJsonArray purchaseablePieces;
 
     for (Piece *piece : m_purchaseablePieces)
         purchaseablePieces.append(piece->asJson());
 
-    jsonObject["purchaseablePieces"] = purchaseablePieces;
-
-    return jsonObject;
+    return purchaseablePieces;
 }

@@ -1,27 +1,31 @@
-#ifndef MAINWINDOW_H
-#define MAINWINDOW_H
+#ifndef GAME_H
+#define GAME_H
+
+#include "socket/socket.h"
 
 #include <QGraphicsRectItem>
 #include <QList>
 #include <QMainWindow>
 
 namespace Ui {
-class MainWindow;
+class Game;
 }
 
 class Piece;
 class Board;
 
-class MainWindow : public QMainWindow
+class Game : public QMainWindow
 {
     Q_OBJECT
 
 public:
-    explicit MainWindow(QWidget *parent = 0);
-    ~MainWindow();
+    explicit Game(Socket *socket, QWidget *parent = 0);
+    ~Game();
 
 private slots:
     void purchasePiece();
+    void playTurn(const QString &message);
+    void checkPlay();
 
 private:
     bool eventFilter(QObject *watched, QEvent *event);
@@ -30,7 +34,8 @@ private:
     void showWinMessage();
 
 private:
-    Ui::MainWindow *ui;
+    Socket *m_socket;
+    Ui::Game *ui;
     QList<Piece *> m_pieces;
     Board *m_board;
     QList<QGraphicsRectItem *> m_handRects;
@@ -41,4 +46,4 @@ private:
     bool m_direction;
 };
 
-#endif // MAINWINDOW_H
+#endif // GAME_H
