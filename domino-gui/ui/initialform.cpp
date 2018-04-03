@@ -36,7 +36,7 @@ void InitialForm::startAsServer()
 
     QEventLoop loop;
 
-    auto conn = connect(socket, &Socket::connected, [&](){ loop.exit(); });
+    auto conn = connect(socket, &Socket::connected, [&] () { loop.exit(); });
 
     loop.exec();
 

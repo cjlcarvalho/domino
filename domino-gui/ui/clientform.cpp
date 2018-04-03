@@ -33,33 +33,32 @@ void ClientForm::start()
 
         QEventLoop loop;
 
-        auto connError = connect(client, &Socket::error,
-                                 [&](const QString &errorName) {
+        auto exitError = [&] (const QString &errorName) {
             loop.exit();
-
+            
             ui->jogada->setVisible(false);
             ui->label->setVisible(true);
             ui->conectar->setVisible(true);
             ui->lineEdit->setVisible(true);
-
+            
             connectionErrorMessage(errorName);
-        });
-
-        auto cls = [&]() {
-            close();
-            emit gameStarted();
         };
 
-        auto exitSuccess = [&]() {
+        auto connError = connect(client, &Socket::error, exitError);
+
+        auto exitSuccess = [&] () {
             loop.exit();
 
-            connect(client, &Socket::messageReceived, cls);
+            connect(client, &Socket::messageReceived, [=] () {
+                close();
+                emit gameStarted();
+            });
 
             Game *g = new Game(client);
             g->show();
         };
 
-        auto conn = connect(client, &Socket::connected, exitSuccess);
+        auto connSuccess = connect(client, &Socket::connected, exitSuccess);
 
         ui->jogada->setVisible(true);
         ui->label->setVisible(false);
@@ -69,7 +68,7 @@ void ClientForm::start()
         loop.exec();
 
         disconnect(connError);
-        disconnect(conn);
+        disconnect(connSuccess);
     }
 }
 

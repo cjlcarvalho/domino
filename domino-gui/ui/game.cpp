@@ -27,9 +27,10 @@ Game::Game(Socket *socket, QWidget *parent) :
     layout()->setSizeConstraint(QLayout::SetFixedSize);
 
     if (dynamic_cast<Client *>(socket)) {
+        // Quando for um cliente, aguardar pelo primeiro envio de mensagem do servidor.
         QEventLoop loop;
 
-        auto rcvMsg = [&](const QString &message) {
+        auto receiveMessage = [&] (const QString &message) {
             QJsonDocument doc = QJsonDocument::fromJson(message.toLocal8Bit());
             m_board->update(doc.object());
 
@@ -43,7 +44,7 @@ Game::Game(Socket *socket, QWidget *parent) :
 
         setEnabled(false);
 
-        auto conn = connect(socket, &Socket::messageReceived, rcvMsg);
+        auto conn = connect(socket, &Socket::messageReceived, receiveMessage);
 
         loop.exec();
 
