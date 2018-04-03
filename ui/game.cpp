@@ -89,7 +89,7 @@ void Game::lostConnection()
     msg.show();
     msg.exec();
 
-    close();
+    qApp->quit();
 }
 
 void Game::purchasePiece()
@@ -265,7 +265,7 @@ void Game::playTurn(const QString &message)
         msg.show();
         msg.exec();
 
-        close();
+        qApp->quit();
     }
     else {
         setEnabled(true);
@@ -307,7 +307,7 @@ void Game::checkPlay()
 
         m_socket->close();
 
-        close();
+        qApp->quit();
     }
     else {
         QJsonObject obj;
