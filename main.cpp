@@ -12,7 +12,7 @@ int main(int argc, char *argv[])
     a.setWindowIcon(QIcon(QPixmap(":/images/domino.png")));
 
     MainDialog md;
-    md.exec();
+    md.show();
 
     return a.exec();
 }
