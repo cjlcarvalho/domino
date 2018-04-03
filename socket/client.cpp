@@ -50,5 +50,5 @@ void Client::socketConnected()
 
 void Client::socketError(QAbstractSocket::SocketError e)
 {
-    emit error("Error: " + e);
+    emit error("Error code: " + QString::number(e));
 }
