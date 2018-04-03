@@ -50,6 +50,7 @@ Game::Game(Socket *socket, QWidget *parent) :
         disconnect(conn);
     }
 
+    connect(m_socket, &Socket::disconnected, this, &Game::lostConnection);
     connect(m_socket, &Socket::messageReceived, this, &Game::playTurn);
 
     setWindowTitle("Super Dominó");
@@ -72,13 +73,22 @@ Game::Game(Socket *socket, QWidget *parent) :
     connect(ui->passarVez, &QPushButton::clicked, this, &Game::checkPlay);
 
     repaint();
-
-    // TODO: Incluir closeEvent que encerra a conexão dos sockets.
 }
 
 Game::~Game()
 {
     delete ui;
+}
+
+void Game::lostConnection()
+{
+    QMessageBox msg;
+    msg.setWindowTitle("Conexão perdida");
+    msg.setText("Fim de jogo, pois não foi possível manter a comunicação com o outro host.");
+    msg.show();
+    msg.exec();
+
+    close();
 }
 
 void Game::purchasePiece()

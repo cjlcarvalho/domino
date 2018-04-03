@@ -26,6 +26,7 @@ private slots:
     void purchasePiece();
     void playTurn(const QString &message);
     void checkPlay();
+    void lostConnection();
 
 private:
     bool eventFilter(QObject *watched, QEvent *event);
