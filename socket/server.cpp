@@ -11,7 +11,7 @@ Server::Server(qint16 port) :
     connect(m_server, &QTcpServer::newConnection, this, &Server::socketConnected);
     connect(m_server, &QTcpServer::acceptError, this, &Server::socketError);
 
-    m_server->listen(QHostAddress("127.0.0.1"), port);
+    m_server->listen(QHostAddress::Any, port);
 }
 
 void Server::close()
