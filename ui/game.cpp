@@ -35,7 +35,7 @@ Game::Game(Socket *socket, QWidget *parent) :
             m_board->update(doc.object());
 
             for (QJsonValue value : doc.object()["board"].toArray())
-                m_boardPieces << new Piece(value.toObject()["esq"].toInt(), value.toObject()["dir"].toInt());
+                m_boardPieces << new Piece(value.toObject());
 
             setEnabled(true);
 
@@ -276,7 +276,7 @@ void Game::playTurn(const QString &message)
         m_boardPieces.clear();
 
         for (QJsonValue value : obj["board"].toArray())
-            m_boardPieces << new Piece(value.toObject()["esq"].toInt(), value.toObject()["dir"].toInt());
+            m_boardPieces << new Piece(value.toObject());
 
         repaint();
     }

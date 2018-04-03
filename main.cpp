@@ -1,5 +1,4 @@
 #include "ui/maindialog.h"
-#include "ui/game.h"
 
 #include <QApplication>
 #include <QDebug>
