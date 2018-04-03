@@ -270,8 +270,6 @@ void Game::playTurn(const QString &message)
     else {
         setEnabled(true);
 
-        m_board->update(obj);
-
         qDeleteAll(m_boardPieces);
         m_boardPieces.clear();
 
