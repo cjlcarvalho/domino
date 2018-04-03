@@ -77,6 +77,5 @@ void ClientForm::connectionErrorMessage(const QString &erro)
     QMessageBox message;
     message.setWindowTitle("Erro de conexão!");
     message.setText((!erro.size()) ? "Por favor, preencha com um IP correto." : erro);
-    message.show();
     message.exec();
 }

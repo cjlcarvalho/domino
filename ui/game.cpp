@@ -86,7 +86,6 @@ void Game::lostConnection()
     QMessageBox msg;
     msg.setWindowTitle("Conexão perdida");
     msg.setText("Fim de jogo, pois não foi possível manter a comunicação com o outro host.");
-    msg.show();
     msg.exec();
 
     qApp->quit();
@@ -262,7 +261,6 @@ void Game::playTurn(const QString &message)
         QMessageBox msg;
         msg.setWindowTitle("Você perdeu!");
         msg.setText("Seu oponente ganhou!");
-        msg.show();
         msg.exec();
 
         qApp->quit();
@@ -401,7 +399,6 @@ void Game::showErrorMessage()
     message.setWindowTitle("Jogada incorreta");
     message.setText("Não é possível realizar a jogada,"
                     " tente novamente, passe a vez ou compre uma peça.");
-    message.show();
     message.exec();
 }
 
@@ -410,6 +407,5 @@ void Game::showWinMessage()
     QMessageBox message;
     message.setWindowTitle("Você venceu!");
     message.setText("Parabéns, você venceu!");
-    message.show();
     message.exec();
 }
