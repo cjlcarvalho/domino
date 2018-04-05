@@ -253,11 +253,11 @@ void Game::playTurn(const QString &message)
     QJsonDocument doc = QJsonDocument::fromJson(message.toLocal8Bit());
     QJsonObject obj = doc.object();
 
-    m_board->update(obj);
-
     // TODO: Verificar empate.
 
     if (obj["win"].toString() == "Y") {
+        m_board->update(obj);
+
         QMessageBox msg;
         msg.setWindowTitle("Você perdeu!");
         msg.setText("Seu oponente ganhou!");
@@ -265,7 +265,9 @@ void Game::playTurn(const QString &message)
 
         qApp->quit();
     }
-    else {
+    else if (obj["win"].toString() == "N") {
+        m_board->update(obj);
+
         setEnabled(true);
 
         qDeleteAll(m_boardPieces);
