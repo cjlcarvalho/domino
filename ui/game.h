@@ -26,6 +26,7 @@ private slots:
     void purchasePiece();
     void playTurn(const QString &message);
     void checkPlay();
+    void pass();
     void lostConnection();
 
 private:
@@ -45,6 +46,7 @@ private:
 
     int m_chooseIndex;
     bool m_direction;
+    bool m_pendingDraw;
 };
 
 #endif // GAME_H
