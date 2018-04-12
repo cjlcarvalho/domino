@@ -5,7 +5,6 @@
 #include "game/piece.h"
 #include "socket/client.h"
 
-#include <QDebug>
 #include <QGraphicsPixmapItem>
 #include <QGraphicsScene>
 #include <QJsonArray>
@@ -27,8 +26,20 @@ Game::Game(Socket *socket, QWidget *parent) :
     ui->setupUi(this);
     layout()->setSizeConstraint(QLayout::SetFixedSize);
 
+    setWindowTitle("Super Dominó");
+
+    ui->graphicsView->installEventFilter(this);
+
+    QGraphicsScene *scene = new QGraphicsScene;
+    scene->setItemIndexMethod(QGraphicsScene::NoIndex);
+    scene->addPixmap(QPixmap(":/images/board.jpg"))->setScale(0.53);
+
+    ui->graphicsView->setScene(scene);
+    ui->graphicsView->setMaximumSize(1000, 800);
+    ui->graphicsView->adjustSize();
+
+    // Quando for um cliente, aguardar pelo primeiro envio de mensagem do servidor.
     if (dynamic_cast<Client *>(socket)) {
-        // Quando for um cliente, aguardar pelo primeiro envio de mensagem do servidor.
         QEventLoop loop;
 
         auto receiveMessage = [&] (const QString &message) {
@@ -47,25 +58,11 @@ Game::Game(Socket *socket, QWidget *parent) :
 
     connect(m_socket, &Socket::disconnected, this, &Game::lostConnection);
     connect(m_socket, &Socket::messageReceived, this, &Game::playTurn);
-
-    setWindowTitle("Super Dominó");
-
-    ui->graphicsView->installEventFilter(this);
-
-    QGraphicsScene *scene = new QGraphicsScene;
-    scene->setItemIndexMethod(QGraphicsScene::NoIndex);
-
-    scene->addPixmap(QPixmap(":/images/board.jpg"))->setScale(0.53);
-
-    ui->graphicsView->setScene(scene);
-    ui->graphicsView->setMaximumSize(1000, 800);
-    ui->graphicsView->adjustSize();
+    connect(ui->comprarPeca, &QPushButton::clicked, this, &Game::purchasePiece);
+    connect(ui->passarVez, &QPushButton::clicked, this, &Game::pass);
 
     for (int i = 0; i < 7; i++)
         m_pieces << m_board->purchasePiece();
-
-    connect(ui->comprarPeca, &QPushButton::clicked, this, &Game::purchasePiece);
-    connect(ui->passarVez, &QPushButton::clicked, this, &Game::pass);
 
     repaint();
 }
@@ -246,15 +243,15 @@ void Game::playTurn(const QString &message)
 {
     QJsonObject obj = QJsonDocument::fromJson(message.toLocal8Bit()).object();
 
-    // TODO: Verificar empate.
-
     if (obj["win"].toString() == "L") {
         if (obj["countPieces"].toInt() == m_pieces.size()) {
             QMessageBox msg;
 
             msg.setWindowTitle("Empate!");
-            msg.setText(QString("Não existem mais jogadas e você tem " + QString::number(m_pieces.size())
-                                + " peças na mão contra as " + QString::number(obj["countPieces"].toInt()) + " de seu oponente."));
+            msg.setText(QString("Não existem mais jogadas e você tem " + 
+				QString::number(m_pieces.size()) + 
+				" peças na mão contra as " + 
+				QString::number(obj["countPieces"].toInt()) + " de seu oponente."));
             msg.exec();
 
             m_socket->close();
@@ -268,7 +265,7 @@ void Game::playTurn(const QString &message)
             msg.setText("Não existem mais jogadas e você tem " +
                         QString::number(m_pieces.size()) +
                         " peças na mão contra as " +
-                        QString::number(obj["countPieces"].toInt()) +" de seu oponente.");
+                        QString::number(obj["countPieces"].toInt()) + " de seu oponente.");
             msg.exec();
 
             m_socket->close();
@@ -284,6 +281,7 @@ void Game::playTurn(const QString &message)
             QJsonObject obj;
             obj["win"] = "L";
             obj["countPieces"] = QJsonValue(yourPieces);
+
             QJsonDocument doc(obj);
 
             m_socket->send(doc.toJson());
@@ -291,8 +289,10 @@ void Game::playTurn(const QString &message)
             QMessageBox msg;
 
             msg.setWindowTitle("Você perdeu!");
-            msg.setText("Não existem mais jogadas e você tem " + QString::number(yourPieces)
-                                + " peças na mão contra as " + QString::number(enemyPieces) + " de seu oponente.");
+            msg.setText("Não existem mais jogadas e você tem " + 
+			QString::number(yourPieces) + 
+			" peças na mão contra as " + 
+			QString::number(enemyPieces) + " de seu oponente.");
             msg.exec();
 
             qApp->quit();
@@ -301,8 +301,10 @@ void Game::playTurn(const QString &message)
             QMessageBox msg;
 
             msg.setWindowTitle("Você ganhou!");
-            msg.setText("Não existem mais jogadas e você tem " + QString::number(yourPieces)
-                         + " peças na mão contra as " + QString::number(enemyPieces) + " de seu oponente.");
+            msg.setText("Não existem mais jogadas e você tem " + 
+			QString::number(yourPieces) + 
+			" peças na mão contra as " + 
+			QString::number(enemyPieces) + " de seu oponente.");
             msg.exec();
 
             QJsonObject obj;
@@ -328,8 +330,10 @@ void Game::playTurn(const QString &message)
             QMessageBox msg;
 
             msg.setWindowTitle("Empate!");
-            msg.setText("Não existem mais jogadas e você tem " + QString::number(yourPieces)
-                        + " peças na mão contra as " + QString::number(enemyPieces) + " de seu oponente.");
+            msg.setText("Não existem mais jogadas e você tem " + 
+			QString::number(yourPieces) + 
+			" peças na mão contra as " + 
+			QString::number(enemyPieces) + " de seu oponente.");
             msg.exec();
 
             qApp->quit();
@@ -339,8 +343,10 @@ void Game::playTurn(const QString &message)
         QMessageBox msg;
 
         msg.setWindowTitle("Você perdeu!");
-        msg.setText("Não existem mais jogadas e você tem " + QString::number(m_boardPieces.size())
-                    + " peças na mão contra as " + QString::number(obj["countPieces"].toInt()) + " de seu oponente.");
+        msg.setText("Não existem mais jogadas e você tem " + 
+		    QString::number(m_boardPieces.size()) + 
+		    " peças na mão contra as " + 
+		    QString::number(obj["countPieces"].toInt()) + " de seu oponente.");
         msg.exec();
 
         m_socket->close();
@@ -359,11 +365,15 @@ void Game::playTurn(const QString &message)
         for (QJsonValue value : obj["board"].toArray())
             m_boardPieces << new Piece(value.toObject());
 
+        ui->label_adv->setText("Qtd. peças do adversário: " + QString::number(obj["countPieces"].toInt()));
+
         repaint();
     }
     else if (obj["win"].toString() == "Y") { // win
         m_pendingDraw = false;
         m_board->update(obj);
+
+	repaint();
 
         QMessageBox msg;
         msg.setWindowTitle("Você perdeu!");
@@ -386,6 +396,8 @@ void Game::playTurn(const QString &message)
         for (QJsonValue value : obj["board"].toArray())
             m_boardPieces << new Piece(value.toObject());
 
+        ui->label_adv->setText("Qtd. peças do adversário: " + QString::number(obj["countPieces"].toInt()));
+
         repaint();
     }
 }
@@ -394,8 +406,6 @@ void Game::pass()
 {
     m_direction = false;
     m_chooseIndex = -1;
-
-    qDebug() << "pass " << (m_pendingDraw ? " pendingDraw" : " not pendingDraw");
 
     if (m_pendingDraw) {
         QJsonObject obj;
@@ -414,6 +424,7 @@ void Game::pass()
 
         obj["win"] = "P";
         obj["purchaseablePieces"] = m_board->asJson();
+        obj["countPieces"] = m_pieces.size();
 
         QJsonArray array;
 
@@ -422,8 +433,7 @@ void Game::pass()
 
         obj["board"] = array;
 
-        QJsonDocument doc;
-        doc.setObject(obj);
+        QJsonDocument doc(obj);
 
         m_socket->send(doc.toJson());
 
@@ -444,6 +454,7 @@ void Game::checkPlay()
 
         obj["win"] = "Y";
         obj["purchaseablePieces"] = m_board->asJson();
+        obj["countPieces"] = m_pieces.size();
 
         QJsonArray array;
 
@@ -452,8 +463,7 @@ void Game::checkPlay()
 
         obj["board"] = array;
 
-        QJsonDocument doc;
-        doc.setObject(obj);
+        QJsonDocument doc(obj);
 
         m_socket->send(doc.toJson());
 
@@ -463,8 +473,10 @@ void Game::checkPlay()
     }
     else {
         QJsonObject obj;
+
         obj["win"] = "N";
         obj["purchaseablePieces"] = m_board->asJson();
+        obj["countPieces"] = m_pieces.size();
 
         QJsonArray array;
 
@@ -473,8 +485,7 @@ void Game::checkPlay()
 
         obj["board"] = array;
 
-        QJsonDocument doc;
-        doc.setObject(obj);
+        QJsonDocument doc(obj);
 
         m_socket->send(doc.toJson());
 
@@ -500,8 +511,9 @@ void Game::repaint()
 
     for (int i = 0; i < m_boardPieces.size(); i++) {
         QGraphicsRectItem *rect = new QGraphicsRectItem(0, 0, 159, 318);
+
         QBrush brush(QPixmap(":/images/pieces/" + QString::number(m_boardPieces[i]->esq()) +
-                              "x" + QString::number(m_boardPieces[i]->dir()) + ".png"));
+                             "x" + QString::number(m_boardPieces[i]->dir()) + ".png"));
 
         QTransform transform;
         transform.rotate(-90);
@@ -527,8 +539,10 @@ void Game::repaint()
 
     for (int i = 0; i < m_pieces.size(); i++) {
         QGraphicsRectItem *rect = new QGraphicsRectItem(0, 0, 159, 318);
+
         QBrush brush(QPixmap(":/images/pieces/" + QString::number(m_pieces[i]->esq()) + "x" +
                              QString::number(m_pieces[i]->dir()) + ".png"));
+
         rect->setBrush(brush);
 
         if (m_chooseIndex == i)

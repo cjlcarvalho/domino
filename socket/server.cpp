@@ -25,7 +25,6 @@ void Server::socketConnected()
         m_client = m_server->nextPendingConnection();
 
         if (m_client) {
-            qDebug() << "Client: " << m_client->peerAddress();
             connect(m_client, &QTcpSocket::readyRead, this, &Server::socketReadReady);
             connect(m_client, &QTcpSocket::disconnected, this, &Server::closeConnection);
         }
@@ -34,7 +33,6 @@ void Server::socketConnected()
         QTcpSocket *otherClient = m_server->nextPendingConnection();
 
         if (otherClient) {
-            qDebug() << "Other client trying to connect: " << otherClient->peerAddress();
             otherClient->write("ERROR\n");
             otherClient->disconnect();
         }
@@ -46,10 +44,8 @@ void Server::socketConnected()
 void Server::send(QByteArray data)
 {
     data.append('\n');
-    if (m_client) {
+    if (m_client)
         m_client->write(data);
-        qDebug() << "message sent";
-    }
 }
 
 void Server::closeConnection()
