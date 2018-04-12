@@ -32,17 +32,7 @@ Game::Game(Socket *socket, QWidget *parent) :
         QEventLoop loop;
 
         auto receiveMessage = [&] (const QString &message) {
-
             playTurn(message);
-
-            /* QJsonDocument doc = QJsonDocument::fromJson(message.toLocal8Bit());
-            m_board->update(doc.object());
-
-            for (QJsonValue value : doc.object()["board"].toArray())
-                m_boardPieces << new Piece(value.toObject());
-
-            setEnabled(true); */
-
             loop.exit();
         };
 
@@ -275,10 +265,10 @@ void Game::playTurn(const QString &message)
             QMessageBox msg;
 
             msg.setWindowTitle("Você ganhou!");
-            msg.setText(QString("Não existem mais jogadas e você tem " +
-                                QString::number(m_pieces.size()) +
-                                " peças na mão contra as " +
-                                QString::number(obj["countPieces"].toInt()) +" de seu oponente."));
+            msg.setText("Não existem mais jogadas e você tem " +
+                        QString::number(m_pieces.size()) +
+                        " peças na mão contra as " +
+                        QString::number(obj["countPieces"].toInt()) +" de seu oponente.");
             msg.exec();
 
             m_socket->close();
@@ -301,8 +291,8 @@ void Game::playTurn(const QString &message)
             QMessageBox msg;
 
             msg.setWindowTitle("Você perdeu!");
-            msg.setText(QString("Não existem mais jogadas e você tem " + QString::number(yourPieces)
-                                + " peças na mão contra as " + QString::number(enemyPieces) + " de seu oponente."));
+            msg.setText("Não existem mais jogadas e você tem " + QString::number(yourPieces)
+                                + " peças na mão contra as " + QString::number(enemyPieces) + " de seu oponente.");
             msg.exec();
 
             qApp->quit();
@@ -311,8 +301,8 @@ void Game::playTurn(const QString &message)
             QMessageBox msg;
 
             msg.setWindowTitle("Você ganhou!");
-            msg.setText(QString("Não existem mais jogadas e você tem " + QString::number(yourPieces)
-                                + " peças na mão contra as " + QString::number(enemyPieces) + " de seu oponente."));
+            msg.setText("Não existem mais jogadas e você tem " + QString::number(yourPieces)
+                         + " peças na mão contra as " + QString::number(enemyPieces) + " de seu oponente.");
             msg.exec();
 
             QJsonObject obj;
@@ -338,8 +328,8 @@ void Game::playTurn(const QString &message)
             QMessageBox msg;
 
             msg.setWindowTitle("Empate!");
-            msg.setText(QString("Não existem mais jogadas e você tem " + QString::number(yourPieces)
-                                + " peças na mão contra as " + QString::number(enemyPieces) + " de seu oponente."));
+            msg.setText("Não existem mais jogadas e você tem " + QString::number(yourPieces)
+                        + " peças na mão contra as " + QString::number(enemyPieces) + " de seu oponente.");
             msg.exec();
 
             qApp->quit();
@@ -349,8 +339,8 @@ void Game::playTurn(const QString &message)
         QMessageBox msg;
 
         msg.setWindowTitle("Você perdeu!");
-        msg.setText(QString("Não existem mais jogadas e você tem " + QString::number(m_boardPieces.size())
-                            + " peças na mão contra as " + QString::number(obj["countPieces"].toInt()) + " de seu oponente."));
+        msg.setText("Não existem mais jogadas e você tem " + QString::number(m_boardPieces.size())
+                    + " peças na mão contra as " + QString::number(obj["countPieces"].toInt()) + " de seu oponente.");
         msg.exec();
 
         m_socket->close();
@@ -469,7 +459,7 @@ void Game::checkPlay()
 
         //m_socket->close();
 
-        qApp->quit();
+        //qApp->quit();
     }
     else {
         QJsonObject obj;
