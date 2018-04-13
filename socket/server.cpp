@@ -65,5 +65,6 @@ void Server::socketReadReady()
 
 void Server::socketError(QAbstractSocket::SocketError e)
 {
-    emit error("Error: " + e);
+    Q_UNUSED(e);
+    emit error("Erro: " + m_server->errorString());
 }
